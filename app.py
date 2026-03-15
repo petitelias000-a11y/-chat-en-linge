@@ -1,66 +1,128 @@
-import streamlit as st
-import pandas as pd
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat System - Elias</title>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; display: flex; justify-content: center; padding: 20px; }
+        #main-card { background: #2d2d2d; width: 100%; max-width: 500px; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1, h2 { text-align: center; color: #00d4ff; }
+        input, button, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; box-sizing: border-box; }
+        input { background: #3d3d3d; color: white; }
+        button { background: #00d4ff; color: #1a1a1a; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #0099bb; transform: scale(1.02); }
+        .log { background: #1a1a1a; padding: 10px; border-radius: 5px; height: 150px; overflow-y: auto; font-family: monospace; font-size: 0.9em; border: 1px solid #444; margin-top: 10px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="main-card">
+    <h1>💬 CHAT SYSTEM</h1>
+    
+    <div id="menu-principal">
+        <button py-click="show_create">1. Créer compte</button>
+        <button py-click="show_login">2. Connexion</button>
+        <button py-click="show_parent">3. Mode Parent</button>
+    </div>
+
+    <div id="screen-create" class="hidden">
+        <h2>Créer un compte</h2>
+        <input type="text" id="reg-name" placeholder="Pseudo">
+        <input type="password" id="reg-pass" placeholder="Mot de passe">
+        <p style="font-size: 0.8em;">Admins peuvent voir messages. Accepter ?</p>
+        <button py-click="logic_create">Accepter et Créer</button>
+        <button style="background:#555" py-click="back_to_main">Retour</button>
+    </div>
+
+    <div id="screen-login" class="hidden">
+        <h2>Connexion</h2>
+        <input type="text" id="log-name" placeholder="Pseudo">
+        <input type="password" id="log-pass" placeholder="Mot de passe">
+        <button py-click="logic_login">Se connecter</button>
+        <button style="background:#555" py-click="back_to_main">Retour</button>
+    </div>
+
+    <div id="screen-user" class="hidden">
+        <h2 id="user-title">Menu</h2>
+        <button py-click="logic_send_msg">Envoyer un message</button>
+        <button py-click="logic_read_msg">Lire mes messages</button>
+        <button style="background:#ff4b4b" py-click="back_to_main">Déconnexion</button>
+    </div>
+
+    <div id="console-output" class="log">Bienvenue... En attente d'action.</div>
+</div>
+
+<script type="py">
+from pyscript import document
 import time
 
-# Configuration de la page
-st.set_page_config(page_title="Mon Système de Chat", layout="centered")
-st.title("💬 Mon Système de Chat")
+# Simulation des fichiers (en mémoire vive)
+db = {
+    "accounts": {"elias": "lolola"},
+    "messages": [],
+    "bans": {},
+    "admins": ["elias"],
+    "parents": {}
+}
 
-# Initialisation de la base de données en mémoire (Pour le test)
-if 'db_accounts' not in st.session_state:
-    st.session_state.db_accounts = {"elias": "lolola"} # Admin par défaut
-if 'db_messages' not in st.session_state:
-    st.session_state.db_messages = []
+def log(txt):
+    out = document.querySelector("#console-output")
+    out.innerHTML = f"> {txt}<br>" + out.innerHTML
 
-# --- INTERFACE ---
-menu = ["Connexion", "Créer un compte", "Mode Parent"]
-choix = st.sidebar.selectbox("Menu Principal", menu)
+# NAVIGATION
+def back_to_main(event):
+    for s in ["create", "login", "user"]:
+        document.querySelector(f"#screen-{s}").classList.add("hidden")
+    document.querySelector("#menu-principal").classList.remove("hidden")
 
-if choix == "Créer un compte":
-    st.subheader("Création de compte")
-    new_user = st.text_input("Pseudo")
-    new_pwd = st.text_input("Mot de passe", type='password')
-    agree = st.checkbox("J'accepte que les admins voient mes messages")
+def show_create(event):
+    document.querySelector("#menu-principal").classList.add("hidden")
+    document.querySelector("#screen-create").classList.remove("hidden")
+
+def show_login(event):
+    document.querySelector("#menu-principal").classList.add("hidden")
+    document.querySelector("#screen-login").classList.remove("hidden")
+
+# LOGIQUE
+def logic_create(event):
+    name = document.querySelector("#reg-name").value
+    pwd = document.querySelector("#reg-pass").value
+    if name and pwd:
+        db["accounts"][name] = pwd
+        log(f"Compte {name} créé avec succès !")
+        back_to_main(None)
+
+def logic_login(event):
+    name = document.querySelector("#log-name").value
+    pwd = document.querySelector("#log-pass").value
     
-    if st.button("S'inscrire"):
-        if agree and new_user not in st.session_state.db_accounts:
-            st.session_state.db_accounts[new_user] = new_pwd
-            st.success("Compte créé ! Connectez-vous à gauche.")
-        else:
-            st.error("Erreur : Pseudo déjà pris ou accord refusé.")
+    if name in db["accounts"] and db["accounts"][name] == pwd:
+        log(f"Connecté en tant que {name}")
+        document.querySelector("#screen-login").classList.add("hidden")
+        document.querySelector("#screen-user").classList.remove("hidden")
+        document.querySelector("#user-title").innerText = f"Salut {name}"
+    else:
+        log("Erreur : Identifiants incorrects")
 
-elif choix == "Connexion":
-    st.subheader("Se connecter")
-    user = st.text_input("Pseudo")
-    pwd = st.text_input("Mot de passe", type='password')
-    
-    if st.button("Lancer la session"):
-        if user in st.session_state.db_accounts and st.session_state.db_accounts[user] == pwd:
-            st.success(f"Bienvenue {user} !")
-            st.session_state.logged_in_user = user
-        else:
-            st.error("Identifiants incorrects")
+def logic_send_msg(event):
+    dest = prompt("Envoyer à qui ?")
+    txt = prompt("Message :")
+    if dest and txt:
+        db["messages"].append({"from": "Utilisateur", "to": dest, "text": txt})
+        log(f"Message envoyé à {dest}")
 
-    # Si connecté, afficher les options de message
-    if 'logged_in_user' in st.session_state:
-        st.write("---")
-        dest = st.text_input("Envoyer à (destinataire)")
-        msg = st.text_area("Votre message")
-        if st.button("Envoyer"):
-            st.session_state.db_messages.append({"de": st.session_state.logged_in_user, "a": dest, "txt": msg})
-            st.info("Message envoyé !")
-            
-        st.subheader("Mes messages reçus")
-        for m in st.session_state.db_messages:
-            if m['a'] == st.session_state.logged_in_user:
-                st.write(f"**De {m['de']} :** {m['txt']}")
+def logic_read_msg(event):
+    log("Affichage des messages (Simulé)")
+    for m in db["messages"]:
+        log(f"De {m['from']}: {m['text']}")
 
-elif choix == "Mode Parent":
-    st.subheader("Contrôle Parental")
-    child = st.text_input("Nom de l'enfant")
-    if st.button("Voir l'activité"):
-        messages_trouves = [m for m in st.session_state.db_messages if m['de'] == child or m['a'] == child]
-        if messages_trouves:
-            st.table(messages_trouves)
-        else:
-            st.write("Aucun message trouvé.")
+# Fonction prompt pour les tests rapides
+from js import prompt
+</script>
+
+</body>
+</html>
